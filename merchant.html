@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>CoffeeCoin — Merchant</title>
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .field{display:flex;flex-direction:column;gap:6px}
+    select,input{padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:#fff}
+    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:end}
+    .toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);opacity:0;transition:.25s;
+      padding:10px 14px;border-radius:12px;border:1px solid var(--line);background:#fff;box-shadow:0 10px 30px rgba(0,0,0,.08)}
+    .toast.show{opacity:1}
+    @media(max-width:900px){.grid2{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <div class="logo">☕</div>
+    <div>
+      <div class="brand-name">CoffeeCoin</div>
+      <div class="brand-tag">Merchant panel</div>
+    </div>
+  </div>
+  <nav class="nav">
+    <a href="index.html">Home</a>
+    <a href="customer.html">Customer</a>
+    <a class="active" href="merchant.html">Merchant</a>
+    <a href="transactions.html">Transactions</a>
+  </nav>
+</header>
+
+<main class="container">
+  <section class="grid2">
+    <div class="card">
+      <h2 style="margin:0 0 12px">Issue CoffeeCoins</h2>
+      <p class="muted" style="margin-top:0">Give points after a purchase (demo).</p>
+
+      <div class="row">
+        <div class="field" style="min-width:220px">
+          <label class="muted">Customer</label>
+          <select id="customerSelect"></select>
+        </div>
+        <div class="field" style="min-width:160px">
+          <label class="muted">Coins to add</label>
+          <input id="amount" type="number" min="1" value="1" />
+        </div>
+        <button class="btn primary" id="issueBtn" type="button">Issue</button>
+      </div>
+
+      <hr/>
+      <div class="note">
+        Real pilot later: scan customer QR → automatically fill customer ID → issue points.
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 style="margin:0 0 12px">Redeem a reward</h2>
+      <p class="muted" style="margin-top:0">Example: 5 coins = 1 free coffee.</p>
+
+      <div class="row">
+        <div class="field" style="min-width:220px">
+          <label class="muted">Customer</label>
+          <select id="redeemCustomer"></select>
+        </div>
+        <button class="btn" id="redeemBtn" type="button">Redeem (cost 5)</button>
+      </div>
+
+      <hr/>
+      <div class="row">
+        <a class="btn" href="transactions.html">View transactions</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="card" style="margin-top:14px">
+    <h3 style="margin:0 0 10px">Settings (demo rules)</h3>
+    <div class="row">
+      <div class="field">
+        <label class="muted">Earn per purchase</label>
+        <input id="earnRule" type="number" min="1" value="1">
+      </div>
+      <div class="field">
+        <label class="muted">Redeem cost</label>
+        <input id="redeemRule" type="number" min="1" value="5">
+      </div>
+      <button class="btn" id="saveRules" type="button">Save rules</button>
+    </div>
+    <p class="muted" style="margin-bottom:0">These rules update the Customer view instantly.</p>
+  </section>
+
+  <footer class="footer">
+    <span class="muted">Prototype only</span>
+    <a class="btn" href="customer.html">Open Customer View</a>
+  </footer>
+</main>
+
+<script src="app.js"></script>
+<script>
+  const state = loadState();
+
+  const customerSelect = document.getElementById("customerSelect");
+  const redeemCustomer = document.getElementById("redeemCustomer");
+
+  function fillSelect(sel){
+    sel.innerHTML = "";
+    Object.keys(state.customers).forEach(id=>{
+      const opt = document.createElement("option");
+      opt.value = id;
+      opt.textContent = `${state.customers[id].name} (${id}) — balance: ${state.customers[id].balance}`;
+      sel.appendChild(opt);
+    });
+  }
+
+  function refresh(){
+    fillSelect(customerSelect);
+    fillSelect(redeemCustomer);
+    document.getElementById("earnRule").value = state.rules.earnPerPurchase;
+    document.getElementById("redeemRule").value = state.rules.redeemCost;
+  }
+
+  document.getElementById("issueBtn").addEventListener("click", ()=>{
+    const id = customerSelect.value;
+    const amt = Math.max(1, Number(document.getElementById("amount").value || 1));
+    state.customers[id].balance += amt;
+    state.tx.unshift({
+      id: crypto.randomUUID(),
+      time: new Date().toISOString(),
+      type: "ISSUE",
+      customerId: id,
+      delta: amt,
+      note: `Issued ${amt} CoffeeCoin(s)`
+    });
+    saveState(state);
+    showToast(`Issued ${amt} coin(s) to ${id}`);
+    refresh();
+  });
+
+  document.getElementById("redeemBtn").addEventListener("click", ()=>{
+    const id = redeemCustomer.value;
+    const cost = state.rules.redeemCost;
+    if(state.customers[id].balance < cost){
+      showToast(`Not enough coins. Need ${cost}.`);
+      return;
+    }
+    state.customers[id].balance -= cost;
+    state.tx.unshift({
+      id: crypto.randomUUID(),
+      time: new Date().toISOString(),
+      type: "REDEEM",
+      customerId: id,
+      delta: -cost,
+      note: `Redeemed reward (cost ${cost})`
+    });
+    saveState(state);
+    showToast(`Reward redeemed for ${id} (-${cost})`);
+    refresh();
+  });
+
+  document.getElementById("saveRules").addEventListener("click", ()=>{
+    state.rules.earnPerPurchase = Math.max(1, Number(document.getElementById("earnRule").value || 1));
+    state.rules.redeemCost = Math.max(1, Number(document.getElementById("redeemRule").value || 5));
+    saveState(state);
+    showToast("Rules saved");
+  });
+
+  refresh();
+</script>
+</body>
+</html>

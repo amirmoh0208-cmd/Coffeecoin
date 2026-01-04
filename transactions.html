@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>CoffeeCoin — Transactions</title>
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:10px 8px;border-bottom:1px solid var(--line);text-align:left}
+    th{color:var(--muted);font-weight:700;font-size:13px}
+    .tag{display:inline-block;padding:4px 8px;border-radius:999px;border:1px solid var(--line);background:var(--bg);font-size:12px;color:var(--muted)}
+    .pos{color:#16a34a;font-weight:800}
+    .neg{color:#dc2626;font-weight:800}
+  </style>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <div class="logo">☕</div>
+    <div>
+      <div class="brand-name">CoffeeCoin</div>
+      <div class="brand-tag">Transactions log</div>
+    </div>
+  </div>
+  <nav class="nav">
+    <a href="index.html">Home</a>
+    <a href="customer.html">Customer</a>
+    <a href="merchant.html">Merchant</a>
+    <a class="active" href="transactions.html">Transactions</a>
+  </nav>
+</header>
+
+<main class="container">
+  <section class="card">
+    <h2 style="margin:0 0 12px">Recent activity</h2>
+    <p class="muted" style="margin-top:0">This is a demo log (local browser storage).</p>
+
+    <div style="overflow:auto">
+      <table>
+        <thead>
+          <tr>
+            <th>Time</th>
+            <th>Type</th>
+            <th>Customer</th>
+            <th>Change</th>
+            <th>Note</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<script src="app.js"></script>
+<script>
+  const state = loadState();
+  const tbody = document.getElementById("tbody");
+
+  function render(){
+    tbody.innerHTML = "";
+    state.tx.forEach(t=>{
+      const tr = document.createElement("tr");
+      const deltaClass = t.delta >= 0 ? "pos" : "neg";
+      tr.innerHTML = `
+        <td>${formatTime(t.time)}</td>
+        <td><span class="tag">${t.type}</span></td>
+        <td>${t.customerId}</td>
+        <td class="${deltaClass}">${t.delta >= 0 ? "+" : ""}${t.delta}</td>
+        <td class="muted">${t.note || ""}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  render();
+</script>
+</body>
+</html>

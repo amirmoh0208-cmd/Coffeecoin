@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>CoffeeCoin — Customer</title>
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    .row{display:flex;gap:12px;flex-wrap:wrap}
+    .field{display:flex;flex-direction:column;gap:6px}
+    select,input{padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:#fff}
+    .big{font-size:40px;font-weight:900;margin:0}
+    .toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);opacity:0;transition:.25s;
+      padding:10px 14px;border-radius:12px;border:1px solid var(--line);background:#fff;box-shadow:0 10px 30px rgba(0,0,0,.08)}
+    .toast.show{opacity:1}
+    .qrbox{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+    canvas{border:1px solid var(--line);border-radius:12px}
+  </style>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <div class="logo">☕</div>
+    <div>
+      <div class="brand-name">CoffeeCoin</div>
+      <div class="brand-tag">Customer view</div>
+    </div>
+  </div>
+  <nav class="nav">
+    <a href="index.html">Home</a>
+    <a class="active" href="customer.html">Customer</a>
+    <a href="merchant.html">Merchant</a>
+    <a href="transactions.html">Transactions</a>
+  </nav>
+</header>
+
+<main class="container">
+  <section class="hero" style="grid-template-columns:1fr .9fr">
+    <div class="card">
+      <h2 style="margin:0 0 12px">Your CoffeeCoin balance</h2>
+
+      <div class="row">
+        <div class="field" style="min-width:220px">
+          <label class="muted">Select customer</label>
+          <select id="customerSelect"></select>
+        </div>
+      </div>
+
+      <hr/>
+      <p class="muted" style="margin:0 0 6px">Current balance</p>
+      <p class="big" id="balance">0</p>
+      <p class="muted" id="ruleText" style="margin:0"></p>
+
+      <hr/>
+      <div class="row">
+        <a class="btn" href="transactions.html">View transactions</a>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 style="margin:0 0 10px">Your QR (demo ID)</h2>
+      <p class="muted" style="margin-top:0">Show this to the café to receive points.</p>
+
+      <div class="qrbox">
+        <canvas id="qrcode"></canvas>
+        <div>
+          <div class="muted">Customer ID</div>
+          <div style="font-weight:800;font-size:18px" id="cid">—</div>
+          <div class="note" style="margin-top:10px">
+            In a real pilot, this can be replaced with a wallet address or a scanned loyalty QR.
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <span class="muted">Demo only — stored in your browser</span>
+    <button class="btn" id="resetBtn" type="button">Reset Demo Data</button>
+  </footer>
+</main>
+
+<script src="app.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+<script>
+  const state = loadState();
+
+  const select = document.getElementById("customerSelect");
+  const balanceEl = document.getElementById("balance");
+  const ruleText = document.getElementById("ruleText");
+  const cidEl = document.getElementById("cid");
+  const canvas = document.getElementById("qrcode");
+
+  function populate(){
+    select.innerHTML = "";
+    Object.keys(state.customers).forEach(id=>{
+      const opt = document.createElement("option");
+      opt.value = id;
+      opt.textContent = `${state.customers[id].name} (${id})`;
+      select.appendChild(opt);
+    });
+    select.value = Object.keys(state.customers)[0];
+  }
+
+  function render(){
+    const id = select.value;
+    const c = state.customers[id];
+    balanceEl.textContent = c.balance;
+    cidEl.textContent = id;
+    ruleText.textContent = `Rule: Earn ${state.rules.earnPerPurchase} coin per purchase. Redeem reward at ${state.rules.redeemCost} coins.`;
+
+    const payload = `CoffeeCoin:Customer:${id}`;
+    QRCode.toCanvas(canvas, payload, { width: 180, margin: 1 }, (err)=> {
+      if(err) console.error(err);
+    });
+  }
+
+  select.addEventListener("change", render);
+
+  document.getElementById("resetBtn").addEventListener("click", ()=>{
+    if(confirm("Reset demo balances and transactions?")){
+      resetDemo();
+      location.reload();
+    }
+  });
+
+  populate();
+  render();
+</script>
+</body>
+</html>
